@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class VideoSplitType(BaseModel):
+    index: Optional[int]
     start: float
     end: float
     video_id: str

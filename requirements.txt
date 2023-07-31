@@ -11,3 +11,4 @@ scenedetect[opencv]
 Pillow
 faiss-cpu
 sentence-transformers
+numpy
