@@ -5,6 +5,8 @@ import numpy as np
 
 import faiss
 
+from pydantic import parse_obj_as
+
 from app.services import IOService, ProcessService
 from app.utils import (
     download_youtube_video,
@@ -23,12 +25,12 @@ class IndexService:
     def __init__(self):
         self.io_service = IOService()
         self.process_service = ProcessService()
-        self.metadata = []
+        self.metadata: List[VideoSplitType] = []
         self.vectorstore = faiss.IndexFlatIP(FAISS_DIMENSION)
 
         if os.path.isfile("./app/files/metadata.json"):
             with open("./app/files/metadata.json", "r") as f:
-                self.metadata = json.load(f)
+                self.metadata = parse_obj_as(List[VideoSplitType], json.load(f))
         if os.path.isfile("./app/files/faiss_index"):
             self.vectorstore = faiss.read_index("./app/files/faiss_index")
 
@@ -113,16 +115,22 @@ class IndexService:
                     current_index = self.vectorstore.ntotal
                     self.vectorstore.add(init_emb)
                     self.metadata.append(
-                        {
-                            "index": current_index,
-                            "start": scene_list[start_index].start,
-                            "end": scene_list[end_index].end,
-                            "video_id": video_id,
-                        }
+                        VideoSplitType(
+                            index=current_index,
+                            start=scene_list[start_index].start,
+                            end=scene_list[end_index].end,
+                            video_id=video_id,
+                        )
                     )
+                    # {
+                    #     "index": current_index,
+                    #     "start": scene_list[start_index].start,
+                    #     "end": scene_list[end_index].end,
+                    #     "video_id": video_id,
+                    # }
 
         with open("./app/files/metadata.json", "w") as f:
-            json.dump(self.metadata, f)
+            json.dump([item.dict() for item in self.metadata], f)
 
         faiss.write_index(self.vectorstore, "./app/files/faiss_index")
 

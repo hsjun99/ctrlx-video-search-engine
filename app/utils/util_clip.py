@@ -35,6 +35,8 @@ def vectorize_image_by_clip(image_path: str) -> np.ndarray:
 def search_video_by_clip(
     query: str, vectorstore: any, metadata: List[VideoSplitType]
 ) -> List[VideoSplitType]:
+    _model = get_model()
+
     text_emb = _model.encode(query)
     distances, neighbor_ids = vectorstore.search(text_emb.reshape(1, -1), N_NEIGHBORS)
     distances, neighbor_ids = distances[0], neighbor_ids[0]
@@ -50,9 +52,7 @@ def search_video_by_clip(
 
     # Initialize final_result with the first item
     first_item: VideoSplitType = metadata_dict[neighbor_ids[0]]
-    final_items: List[VideoSplitType] = [
-        VideoSplitType(start=first_item.start, end=first_item.end)
-    ]
+    final_items: List[VideoSplitType] = [first_item]
 
     # Iterate over the rest of neighbor_ids
     for neighbor_id in neighbor_ids[1:]:
@@ -61,6 +61,8 @@ def search_video_by_clip(
 
         # Check if original_item overlaps with any of the existing ranges in final_result
         for item in final_items:
+            if item.video_id != original_item.video_id:
+                continue
             if (
                 original_item.start >= item.start and original_item.start <= item.end
             ) or (item.end >= original_item.end and item.start <= original_item.end):
@@ -68,7 +70,7 @@ def search_video_by_clip(
                 item.start = min(item.start, original_item.start)
                 item.end = max(item.end, original_item.end)
                 merged = True
-                # break
+                break
 
         # If original_item did not overlap with any range, add it to final_result
         if not merged:

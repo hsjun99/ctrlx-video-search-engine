@@ -5,6 +5,7 @@ import numpy as np
 
 import faiss
 
+from pydantic import parse_obj_as
 
 from app.model import VideoSplitType
 
@@ -15,13 +16,13 @@ from app.constants import FAISS_DIMENSION
 
 class SearchService:
     def __init__(self):
-        self.metadata = []
+        self.metadata: List[VideoSplitType] = []
         self.vectorstore = faiss.IndexFlatIP(FAISS_DIMENSION)
 
     def search_video(self, query: str) -> List[VideoSplitType]:
         if os.path.isfile("./app/files/metadata.json"):
             with open("./app/files/metadata.json", "r") as f:
-                self.metadata = json.load(f)
+                self.metadata = parse_obj_as(List[VideoSplitType], json.load(f))
         if os.path.isfile("./app/files/faiss_index"):
             self.vectorstore = faiss.read_index("./app/files/faiss_index")
 
