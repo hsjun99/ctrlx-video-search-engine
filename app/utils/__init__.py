@@ -9,4 +9,4 @@ from .util_video import (
     split_video_into_scenes,
 )
 
-from .util_clip import vectorize_image_by_clip
+from .util_clip import vectorize_image_by_clip, search_video_by_clip
