@@ -16,6 +16,8 @@ def get_model():
 
 
 def vectorize_image_by_clip(image_path: str) -> np.ndarray:
+    _model = get_model()
+
     img_emb = _model.encode(Image.open(image_path))
     img_emb = img_emb.reshape(1, -1)
 
