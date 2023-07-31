@@ -7,6 +7,8 @@ from app.constants import (
     CREDIT_PER_TRANSLATE_HUNDRED_CHAR,
 )
 
+from app.utils import download_youtube_video, extract_youtube_video_id
+
 
 class IndexService:
     def __init__(self):
@@ -14,7 +16,11 @@ class IndexService:
 
     def index_youtube_video(self, youtube_urls: List[str]):
         # TODO: Implement this
+        save_paths: List[str] = [extract_youtube_video_id(url) for url in youtube_urls]
         # 1. Download video
+        for index, youtube_url in enumerate(youtube_urls):
+            download_youtube_video(youtube_url=youtube_url, save_path=save_paths[index])
+
         # 2. Retrieve Frames
         # 3. Vectorize Frames Using CLIP
         # 4. Split Video By Scene
