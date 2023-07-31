@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.py[cod]
+*.egg-info
+venv
+.ruff_cache
+app/data/*
+.env
+files/
+.mp4
+.mp3
+.srt
