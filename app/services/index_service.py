@@ -80,9 +80,6 @@ class IndexService:
 
             for min_length in [3, 5]:
                 for start_index, scene in enumerate(scene_list):
-                    if scene.length < min_length:
-                        continue
-
                     end_index = None
                     for i in range(start_index + 1, len(scene_list)):
                         if scene_list[i][1] - scene[0] >= min_length:
