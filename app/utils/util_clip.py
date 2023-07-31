@@ -4,12 +4,19 @@ from sentence_transformers import SentenceTransformer, util
 
 import numpy as np
 
-# Load CLIP model
-model = SentenceTransformer("clip-ViT-B-16")
+
+_model = None
+
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = SentenceTransformer("clip-ViT-B-16")
+    return _model
 
 
 def vectorize_image_by_clip(image_path: str) -> np.ndarray:
-    img_emb = model.encode(Image.open(image_path))
+    img_emb = _model.encode(Image.open(image_path))
     img_emb = img_emb.reshape(1, -1)
 
     faiss.normalize_L2(img_emb)
