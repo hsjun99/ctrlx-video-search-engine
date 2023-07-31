@@ -82,9 +82,12 @@ class IndexService:
                 for start_index, scene in enumerate(scene_list):
                     end_index = None
                     for i in range(start_index + 1, len(scene_list)):
-                        if scene_list[i][1] - scene[0] >= min_length:
-                            break
                         end_index = i
+                        if (
+                            scene_list[end_index].end - scene_list[start_index].start
+                            >= min_length
+                        ):
+                            break
 
                     if (
                         end_index is None
