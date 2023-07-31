@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class VideoSplitType(BaseModel):
     start: float
     end: float
-    video_uid: str
+    video_id: str
 
 
 DataT = TypeVar("DataT")
