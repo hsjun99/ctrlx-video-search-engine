@@ -11,6 +11,8 @@ from app.utils import (
     split_video_into_scenes,
 )
 
+from app.model import VideoSplitType
+
 
 class IndexService:
     def __init__(self):
@@ -55,42 +57,15 @@ class IndexService:
                 vectorize_image_by_clip(image_path=f"{dir}/{i:04}.png")
                 i += 1
 
+            scene_list: List[VideoSplitType] = split_video_into_scenes(
+                video_id=video_id
+            )
+
         # 5. Vectorize Scenes
+
         # 6. Remove Assets
-        for dir in save_directories:
-            if dir is not None:
-                self.io_service.remove_directory(dir)
-
-    # def create_transaction(self, video: VideoType, transaction_type: str):
-    #     prev_transaction: TransactionType = (
-    #         self.transaction_repository.sb_get_last_transaction(uid=video.created_by)
-    #     )
-
-    #     consume_amount = 0
-
-    #     if transaction_type == TransactionSubType.TRANSCRIBE:
-    #         consume_amount = (
-    #             math.ceil(video.metadata.duration / 60) * CREDIT_PER_TRANSCRIBE_MINUTE
-    #         )
-
-    #     elif transaction_type == TransactionSubType.TRANSLATE:
-    #         subtitles: Dict[str, TranscriptType] = next(
-    #             (t for t in video.subtitles if t.structure == 4), None
-    #         ).transcript
-    #         consume_amount = (
-    #             math.ceil(sum(len(value.text) for value in subtitles.values()) / 100)
-    #             * CREDIT_PER_TRANSLATE_HUNDRED_CHAR
-    #         )
-
-    #     new_balance = prev_transaction.new_balance - consume_amount
-    #     if new_balance < 0:
-    #         new_balance = 0
-    #     new_transaction = TransactionType(
-    #         consume_amount=consume_amount,
-    #         previous_balance=prev_transaction.new_balance,
-    #         new_balance=new_balance,
-    #         type=transaction_type,
-    #         created_by=video.created_by,
-    #     )
-
-    #     self.transaction_repository.sb_post_transaction(new_transaction=new_transaction)
+        for video_id in video_ids:
+            if video_id is None:
+                continue
+            dir = get_dir_from_video_id(video_id)
+            self.io_service.remove_directory(dir)
