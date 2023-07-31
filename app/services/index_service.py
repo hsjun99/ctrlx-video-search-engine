@@ -30,7 +30,7 @@ class IndexService:
             with open("./app/files/metadata.json", "r") as f:
                 self.metadata = json.load(f)
         if os.path.isfile("./app/files/faiss_index"):
-            self.vectorstore = faiss.read_index("faiss_index")
+            self.vectorstore = faiss.read_index("./app/files/faiss_index")
 
     def index_youtube_videos(self, youtube_urls: List[str]):
         # TODO: Implement this

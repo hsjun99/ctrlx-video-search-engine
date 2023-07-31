@@ -23,7 +23,7 @@ class SearchService:
             with open("./app/files/metadata.json", "r") as f:
                 self.metadata = json.load(f)
         if os.path.isfile("./app/files/faiss_index"):
-            self.vectorstore = faiss.read_index("faiss_index")
+            self.vectorstore = faiss.read_index("./app/files/faiss_index")
 
         final_items: List[VideoSplitType] = search_video_by_clip(
             query=query,
