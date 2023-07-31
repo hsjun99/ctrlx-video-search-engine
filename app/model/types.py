@@ -10,6 +10,7 @@ class VideoSplitType(BaseModel):
     start: float
     end: float
     video_id: str
+    index_list: Optional[List[int]]
 
 
 DataT = TypeVar("DataT")

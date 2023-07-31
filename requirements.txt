@@ -12,3 +12,5 @@ Pillow
 faiss-cpu
 sentence-transformers
 numpy
+multilingual-clip
+open_clip_torch

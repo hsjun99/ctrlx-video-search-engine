@@ -98,7 +98,7 @@ class IndexService:
                     ):
                         continue
 
-                    init_emb = np.zeros((1, 512))
+                    init_emb = np.zeros((1, FAISS_DIMENSION))
                     cnt = 0
                     start_sec = round(scene_list[start_index].start)
                     end_sec = round(scene_list[end_index].end)

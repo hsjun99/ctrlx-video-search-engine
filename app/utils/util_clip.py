@@ -3,15 +3,55 @@ from typing import List
 import faiss
 from sentence_transformers import SentenceTransformer, util
 
+from multilingual_clip import pt_multilingual_clip
+import transformers
+
+import torch
+import open_clip
+
 import numpy as np
 
 from app.model import VideoSplitType
 
+from app.constants import FAISS_DIMENSION
 
 _model = None
+# _image_model = None
+# _text_model = None
+# _tokenizr = None
 
 N_NEIGHBORS = 50
 MIN_NUM_RESULTS = 10
+
+
+# def _get_device():
+#     device = "cuda" if torch.cuda.is_available() else "cpu"
+#     print("Using {} device".format(device))
+#     return device
+
+
+# def get_image_model_and_preprocess():
+#     global _image_model, _preprocess
+#     if _image_model is None:
+#         _image_model, _, _preprocess = open_clip.create_model_and_transforms(
+#             "ViT-B-16-plus-240", pretrained="laion400m_e32"
+#         )
+#         _image_model.to(_get_device())
+
+#     return _image_model, _preprocess
+
+
+# def get_text_model_and_tokenizer():
+#     global _text_model, _tokenizer
+#     if _text_model is None:
+#         _text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+#             "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+#         )
+#         _tokenizer = transformers.AutoTokenizer.from_pretrained(
+#             "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+#         )
+
+#     return _text_model, _tokenizer
 
 
 def get_model():
@@ -23,9 +63,15 @@ def get_model():
 
 def vectorize_image_by_clip(image_path: str) -> np.ndarray:
     _model = get_model()
-
     img_emb = _model.encode(Image.open(image_path))
     img_emb = img_emb.reshape(1, -1)
+    # _image_model, _preprocess = get_image_model_and_preprocess()
+
+    # image = Image.open(image_path)
+    # image = _preprocess(image).unsqueeze(0).to(_get_device())
+
+    # img_emb = _image_model.encode_image(image).detach().cpu().numpy()
+    # img_emb = img_emb.reshape(1, -1)
 
     faiss.normalize_L2(img_emb)
 
@@ -36,8 +82,11 @@ def search_video_by_clip(
     query: str, vectorstore: any, metadata: List[VideoSplitType]
 ) -> List[VideoSplitType]:
     _model = get_model()
-
     text_emb = _model.encode(query)
+
+    # _text_model, _tokenizer = get_text_model_and_tokenizer()
+    # text_emb = _text_model.forward(query, _tokenizer).detach().cpu().numpy()
+
     distances, neighbor_ids = vectorstore.search(text_emb.reshape(1, -1), N_NEIGHBORS)
     distances, neighbor_ids = distances[0], neighbor_ids[0]
 
@@ -52,6 +101,7 @@ def search_video_by_clip(
 
     # Initialize final_result with the first item
     first_item: VideoSplitType = metadata_dict[neighbor_ids[0]]
+    first_item.index_list = [first_item.index]
     final_items: List[VideoSplitType] = [first_item]
 
     # Iterate over the rest of neighbor_ids
@@ -69,15 +119,36 @@ def search_video_by_clip(
                 # Merge the overlapping ranges
                 item.start = min(item.start, original_item.start)
                 item.end = max(item.end, original_item.end)
+                item.index_list.append(original_item.index)
                 merged = True
                 break
 
         # If original_item did not overlap with any range, add it to final_result
         if not merged:
+            original_item.index_list = [original_item.index]
             final_items.append(original_item)
 
         # Stop if we have enough results
         if len(final_items) >= MIN_NUM_RESULTS:
             break
+
+    final_cosine_sims = [-1 for i in range(len(final_items))]
+    for index, item in enumerate(final_items):
+        final_vector = np.zeros((1, FAISS_DIMENSION))
+        for v_index in item.index_list:
+            final_vector += vectorstore.reconstruct(v_index)
+        final_vector /= len(item.index_list)
+        final_cosine_sims[index] = util.cos_sim(
+            final_vector.astype("float32"), text_emb.astype("float32")
+        )
+
+    final_items_coss = list(zip(final_cosine_sims, final_items))
+    list_sorted = sorted(final_items_coss, key=lambda x: x[0], reverse=True)
+
+    final_cosine_sims, final_items = map(list, zip(*list_sorted))
+
+    for item in final_items:
+        del item.index
+        del item.index_list
 
     return final_items
