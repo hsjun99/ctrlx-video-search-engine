@@ -5,4 +5,4 @@ def timecode_to_float(timecode: str) -> float:
 
 
 def get_dir_from_video_id(video_id: str) -> str:
-    return f"files/video/{video_id}"
+    return f"./app/files/video/{video_id}"

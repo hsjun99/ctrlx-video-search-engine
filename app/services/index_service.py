@@ -19,10 +19,11 @@ class IndexService:
         self.io_service = IOService()
         self.process_service = ProcessService()
 
-    def index_youtube_video(self, youtube_urls: List[str]):
+    def index_youtube_videos(self, youtube_urls: List[str]):
         # TODO: Implement this
-        video_ids = List[str] = [None for _ in youtube_urls]
+        video_ids: List[str] = [None for _ in youtube_urls]
 
+        print("1")
         # 1. Download video
         for index, youtube_url in enumerate(youtube_urls):
             try:
@@ -40,13 +41,18 @@ class IndexService:
                 video_ids[index] = None
                 continue
 
+        print("2")
+
         # 2. Retrieve Frames
         # 3. Vectorize Frames Using CLIP
         # 4. Split Video By Scene
         for index, video_id in enumerate(video_ids):
+            print(video_id)
             if video_id is None:
                 continue
             dir = get_dir_from_video_id(video_id)
+
+            print("start extract frames")
 
             self.process_service.extract_frames(
                 file_path=f"{dir}/{video_id}.mp4", save_path=dir

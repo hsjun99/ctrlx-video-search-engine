@@ -11,8 +11,8 @@ from app.model import APIResponse
 
 
 @router.post("/index/youtube")
-def index_youtube_video(req: Request) -> APIResponse:
-    youtube_urls: List[str] = req.youtube_urls
+async def index_youtube_video(req: Request) -> APIResponse:
+    youtube_urls: List[str] = (await req.json()).get("youtube_urls", [])
 
     index_video.delay(youtube_urls)
 
