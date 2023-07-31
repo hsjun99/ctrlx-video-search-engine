@@ -7,10 +7,5 @@ from app.services import IndexService
 
 
 @celery_app.task()
-def index_video(youtube_url: str):
+def index_video(youtube_urls: List[str]):
     index_service = IndexService()
-
-
-@celery_app.task()
-def search_video(query: str):
-    pass

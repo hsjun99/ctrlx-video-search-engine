@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Request
 
 router = APIRouter(
@@ -10,8 +11,10 @@ from app.model import APIResponse
 
 
 @router.post("/index/youtube")
-def index_youtube_video(req: Request, youtube_url: str) -> APIResponse:
-    index_video.delay(youtube_url)
+def index_youtube_video(req: Request) -> APIResponse:
+    youtube_urls: List[str] = req.youtube_urls
+
+    index_video.delay(youtube_urls)
 
     return APIResponse(
         success=True,
@@ -23,4 +26,11 @@ def index_youtube_video(req: Request, youtube_url: str) -> APIResponse:
 
 @router.post("/search")
 def search_video(req: Request):
-    pass
+    query = "TEMPORARY QUERY"
+
+    return APIResponse(
+        success=True,
+        code=200,
+        message="Operation completed successfully",
+        data=[],
+    )
