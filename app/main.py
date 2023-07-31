@@ -2,7 +2,6 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.constants import APP_TITLE, APP_VERSION
-from app.dependencies import is_valid_access_token, is_valid_admin
 
 from app.routers import VideoRouter
 

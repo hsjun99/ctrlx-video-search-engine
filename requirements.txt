@@ -1,1 +1,13 @@
 fastapi
+python-dotenv
+uvicorn[standard]
+pydantic
+celery
+langchain
+openai
+tiktoken
+yt_dlp
+scenedetect[opencv]
+Pillow
+faiss-cpu
+sentence-transformers

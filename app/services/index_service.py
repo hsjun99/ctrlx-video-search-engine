@@ -61,6 +61,8 @@ class IndexService:
                 video_id=video_id
             )
 
+            print(len(scene_list))
+
         # 5. Vectorize Scenes
 
         # 6. Remove Assets
