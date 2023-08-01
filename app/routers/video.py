@@ -33,6 +33,18 @@ async def search_video(req: Request):
 
     final_items: List[VideoSplitType] = search_service.search_video(query=query)
 
+    def convert(seconds):
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return (int(hours), int(minutes), int(seconds))
+
+    final_items = [item.dict() for item in final_items]
+    for item in final_items:
+        s_h, s_m, s_s = convert(item["start"])
+        e_h, e_m, e_s = convert(item["end"])
+        item["start"] = f"{s_h}:{s_m}:{s_s}"
+        item["end"] = f"{e_h}:{e_m}:{e_s}"
+
     return APIResponse(
         success=True,
         code=200,

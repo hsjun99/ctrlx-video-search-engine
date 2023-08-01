@@ -9,6 +9,8 @@ import transformers
 import torch
 import open_clip
 
+import math
+
 import numpy as np
 
 from app.model import VideoSplitType
@@ -16,11 +18,11 @@ from app.model import VideoSplitType
 from app.constants import FAISS_DIMENSION
 
 _model = None
-# _image_model = None
-# _text_model = None
-# _tokenizr = None
+_image_model = None
+_text_model = None
+_tokenizr = None
 
-N_NEIGHBORS = 50
+N_NEIGHBORS = 100
 MIN_NUM_RESULTS = 10
 
 
@@ -58,6 +60,7 @@ def get_model():
     global _model
     if _model is None:
         _model = SentenceTransformer("clip-ViT-B-16")
+        # _model = SentenceTransformer("clip-ViT-L-14")
     return _model
 
 
@@ -65,29 +68,33 @@ def vectorize_image_by_clip(image_path: str) -> np.ndarray:
     _model = get_model()
     img_emb = _model.encode(Image.open(image_path))
     img_emb = img_emb.reshape(1, -1)
-    # _image_model, _preprocess = get_image_model_and_preprocess()
 
+    # _image_model, _preprocess = get_image_model_and_preprocess()
     # image = Image.open(image_path)
     # image = _preprocess(image).unsqueeze(0).to(_get_device())
 
     # img_emb = _image_model.encode_image(image).detach().cpu().numpy()
     # img_emb = img_emb.reshape(1, -1)
 
-    faiss.normalize_L2(img_emb)
+    # faiss.normalize_L2(img_emb)
 
     return img_emb
 
 
 def search_video_by_clip(
-    query: str, vectorstore: any, metadata: List[VideoSplitType]
+    query: str, vectorstore: any, frame_vectorsore: any, metadata: List[VideoSplitType]
 ) -> List[VideoSplitType]:
     _model = get_model()
-    text_emb = _model.encode(query)
+    # text_emb = _model.encode(query)
+    # print(text_emb.shape)
+    text_emb = _model.encode(query).reshape(1, -1)
 
     # _text_model, _tokenizer = get_text_model_and_tokenizer()
     # text_emb = _text_model.forward(query, _tokenizer).detach().cpu().numpy()
 
-    distances, neighbor_ids = vectorstore.search(text_emb.reshape(1, -1), N_NEIGHBORS)
+    faiss.normalize_L2(text_emb)
+
+    distances, neighbor_ids = vectorstore.search(text_emb, N_NEIGHBORS)
     distances, neighbor_ids = distances[0], neighbor_ids[0]
 
     zipped = list(zip(distances, neighbor_ids))  # Pair up the two lists
@@ -134,18 +141,30 @@ def search_video_by_clip(
 
     final_cosine_sims = [-1 for i in range(len(final_items))]
     for index, item in enumerate(final_items):
-        final_vector = np.zeros((1, FAISS_DIMENSION))
-        for v_index in item.index_list:
-            final_vector += vectorstore.reconstruct(v_index)
-        final_vector /= len(item.index_list)
-        final_cosine_sims[index] = util.cos_sim(
-            final_vector.astype("float32"), text_emb.astype("float32")
-        )
+        start_sec, end_sec = round(item.start), round(item.end)
+
+        for i in range(start_sec, end_sec + 1):
+            v = frame_vectorsore.reconstruct(i)
+            final_cosine_sims[index] = max(
+                util.cos_sim(v, text_emb), final_cosine_sims[index]
+            )
+
+    # final_cosine_sims = [-1 for i in range(len(final_items))]
+    # for index, item in enumerate(final_items):
+    #     final_vector = np.zeros((1, FAISS_DIMENSION))
+    #     for v_index in item.index_list:
+    #         v = vectorstore.reconstruct(v_index)
+    #         final_vector += v
+
+    #     final_cosine_sims[index] = util.cos_sim(
+    #         final_vector.astype("double"), text_emb.astype("double")
+    #     )
 
     final_items_coss = list(zip(final_cosine_sims, final_items))
     list_sorted = sorted(final_items_coss, key=lambda x: x[0], reverse=True)
 
     final_cosine_sims, final_items = map(list, zip(*list_sorted))
+    print(final_cosine_sims)
 
     for item in final_items:
         del item.index
