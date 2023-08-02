@@ -13,7 +13,7 @@ import math
 
 import numpy as np
 
-from app.model import VideoSplitType
+from app.model import VideoSplitType, FrameMetaDataType
 
 from app.constants import FAISS_DIMENSION
 
@@ -82,7 +82,11 @@ def vectorize_image_by_clip(image_path: str) -> np.ndarray:
 
 
 def search_video_by_clip(
-    query: str, vectorstore: any, frame_vectorsore: any, metadata: List[VideoSplitType]
+    query: str,
+    vectorstore: any,
+    frame_vectorsore: any,
+    metadata: List[VideoSplitType],
+    frame_metadata: List[FrameMetaDataType],
 ) -> List[VideoSplitType]:
     _model = get_model()
     # text_emb = _model.encode(query)
@@ -111,8 +115,11 @@ def search_video_by_clip(
     first_item.index_list = [first_item.index]
     final_items: List[VideoSplitType] = [first_item]
 
+    neighbor_ids = list(filter(lambda i: i != -1, neighbor_ids))
+    distances = distances[: len(neighbor_ids)]
     # Iterate over the rest of neighbor_ids
     for neighbor_id in neighbor_ids[1:]:
+        # print(metadata_dict)
         original_item: VideoSplitType = metadata_dict[neighbor_id]
         merged = False
 
@@ -120,6 +127,10 @@ def search_video_by_clip(
         for item in final_items:
             if item.video_id != original_item.video_id:
                 continue
+
+            # if item.end - item.start > 30:  # MIGHT NEED TO BE REMOVED (TESTING)
+            #     continue
+
             if (
                 original_item.start >= item.start and original_item.start <= item.end
             ) or (item.end >= original_item.end and item.start <= original_item.end):
@@ -141,10 +152,18 @@ def search_video_by_clip(
 
     final_cosine_sims = [-1 for i in range(len(final_items))]
     for index, item in enumerate(final_items):
+        first_frame_vector_index = [
+            frame_data
+            for frame_data in frame_metadata
+            if frame_data.video_id == item.video_id and frame_data.frame == 1
+        ][0].index
+
+        print(first_frame_vector_index)
+
         start_sec, end_sec = round(item.start), round(item.end)
 
         for i in range(start_sec, end_sec + 1):
-            v = frame_vectorsore.reconstruct(i)
+            v = frame_vectorsore.reconstruct(i + first_frame_vector_index)
             final_cosine_sims[index] = max(
                 util.cos_sim(v, text_emb), final_cosine_sims[index]
             )
@@ -164,7 +183,7 @@ def search_video_by_clip(
     list_sorted = sorted(final_items_coss, key=lambda x: x[0], reverse=True)
 
     final_cosine_sims, final_items = map(list, zip(*list_sorted))
-    print(final_cosine_sims)
+    # print(final_cosine_sims)
 
     for item in final_items:
         del item.index

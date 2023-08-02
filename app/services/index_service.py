@@ -7,16 +7,30 @@ import faiss
 
 from pydantic import parse_obj_as
 
-from app.services import IOService, ProcessService
+from langchain.docstore.document import Document
+from langchain.embeddings import OpenAIEmbeddings
+
+os.environ["OPENAI_API_KEY"] = "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"
+
+from app.services import IOService, ProcessService, AudioService
 from app.utils import (
     download_youtube_video,
+    download_youtube_audio,
+    get_youtube_video_title,
     extract_youtube_video_id,
     vectorize_image_by_clip,
     get_dir_from_video_id,
     split_video_into_scenes,
 )
 
-from app.model import VideoSplitType
+from app.model import (
+    VideoSplitType,
+    VideoType,
+    FrameMetaDataType,
+    SegmentType,
+    WordType,
+    TranscriptMetadataType,
+)
 
 from app.constants import FAISS_DIMENSION
 
@@ -27,13 +41,31 @@ class IndexService:
     def __init__(self):
         self.io_service = IOService()
         self.process_service = ProcessService()
+        self.audio_service = AudioService()
         self.metadata: List[VideoSplitType] = []
+        self.frame_metadata: List[FrameMetaDataType] = []
+        self.transcript_metadata: List[TranscriptMetadataType] = []
+        self.video_list: List[VideoType] = []
         self.vectorstore = faiss.IndexFlatIP(FAISS_DIMENSION)
         self.frame_vectorstore = faiss.IndexFlatIP(FAISS_DIMENSION)
+        self.transcript__vectorstore = faiss.IndexFlatIP(FAISS_DIMENSION)
 
         if os.path.isfile("./app/files/metadata.json"):
             with open("./app/files/metadata.json", "r") as f:
                 self.metadata = parse_obj_as(List[VideoSplitType], json.load(f))
+        if os.path.isfile("./app/files/frame_metadata.json"):
+            with open("./app/files/frame_metadata.json", "r") as f:
+                self.frame_metadata = parse_obj_as(
+                    List[FrameMetaDataType], json.load(f)
+                )
+        if os.path.isfile("./app/files/transcript_metadata.json"):
+            with open("./app/files/transcript_metadata.json", "r") as f:
+                self.transcript_metadata = parse_obj_as(
+                    List[TranscriptMetadataType], json.load(f)
+                )
+        if os.path.isfile("./app/files/video_list.json"):
+            with open("./app/files/video_list.json", "r") as f:
+                self.video_list = parse_obj_as(List[VideoType], json.load(f))
         if os.path.isfile("./app/files/faiss_index"):
             self.vectorstore = faiss.read_index("./app/files/faiss_index")
         if os.path.isfile("./app/files/frame_faiss_index"):
@@ -53,7 +85,11 @@ class IndexService:
             saved_vectors.append(frame_vector)
 
             # faiss.normalize_L2(frame_vector)
+            current_index = self.frame_vectorstore.ntotal
             self.frame_vectorstore.add(frame_vector)
+            self.frame_metadata.append(
+                FrameMetaDataType(index=current_index, frame=i, video_id=video_id)
+            )
             i += 1
 
         return saved_vectors
@@ -61,9 +97,45 @@ class IndexService:
     def _split_video(self, video_id: str) -> List[VideoSplitType]:
         return split_video_into_scenes(video_id=video_id)
 
+    def _transcribe_audio(self, video_id: str) -> List[TranscriptMetadataType]:
+        transcript: List[SegmentType] = self.audio_service.transcribe(video_id=video_id)
+
+        current_index = self.transcript__vectorstore.ntotal
+        embeddings = OpenAIEmbeddings()
+        doc_result = embeddings.embed_documents(
+            [segment.text for segment in transcript]
+        )
+        # print(doc_result)
+
+        for segment in transcript:
+            self.transcript_metadata.append(
+                TranscriptMetadataType(
+                    index=current_index,
+                    video_id=video_id,
+                    start=segment.start,
+                    end=segment.end,
+                )
+            )
+
     def index_youtube_videos(self, youtube_urls: List[str]):
         # TODO: Implement this
         video_ids: List[str] = [None for _ in youtube_urls]
+
+        for index, youtube_url in enumerate(youtube_urls):
+            try:
+                video_id: str = extract_youtube_video_id(youtube_url=youtube_url)
+                dir = get_dir_from_video_id(video_id)
+                self.io_service.create_directory(dir)
+
+                title = get_youtube_video_title(youtube_url=youtube_url)
+                self.video_list.append(
+                    VideoType(title=title, video_id=video_id, status="PENDING")
+                )
+            except Exception:
+                continue
+
+        with open("./app/files/video_list.json", "w") as f:
+            json.dump([item.dict() for item in self.video_list], f)
 
         # 1. Download video
         for index, youtube_url in enumerate(youtube_urls):
@@ -73,11 +145,12 @@ class IndexService:
 
                 dir = get_dir_from_video_id(video_id)
 
-                self.io_service.create_directory(dir)
-
                 download_youtube_video(
                     youtube_url=youtube_url, save_path=f"{dir}/{video_id}.mp4"
                 )
+                # download_youtube_audio(
+                #     youtube_url=youtube_url, save_pathf="{dir}/{video_id}.mp3"
+                # )
 
             except Exception:
                 video_ids[index] = None
@@ -148,8 +221,15 @@ class IndexService:
                         )
                     )
 
+        for item in self.video_list:
+            item.status = "SUCCESS"
+
         with open("./app/files/metadata.json", "w") as f:
             json.dump([item.dict() for item in self.metadata], f)
+        with open("./app/files/frame_metadata.json", "w") as f:
+            json.dump([item.dict() for item in self.frame_metadata], f)
+        with open("./app/files/video_list.json", "w") as f:
+            json.dump([item.dict() for item in self.video_list], f)
         faiss.write_index(self.frame_vectorstore, "./app/files/frame_faiss_index")
         faiss.write_index(self.vectorstore, "./app/files/faiss_index")
 

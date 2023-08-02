@@ -14,3 +14,5 @@ sentence-transformers
 numpy
 multilingual-clip
 open_clip_torch
+pytube
+git+https://github.com/m-bain/whisperx.git

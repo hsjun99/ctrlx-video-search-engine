@@ -1,5 +1,6 @@
 from typing import List
 from yt_dlp import YoutubeDL
+from pytube import YouTube
 from urllib.parse import urlparse, parse_qs
 from scenedetect import open_video, SceneManager
 from scenedetect.detectors import ContentDetector
@@ -7,6 +8,18 @@ from scenedetect.detectors import ContentDetector
 from .util_functions import timecode_to_float, get_dir_from_video_id
 
 from app.model import VideoSplitType
+
+
+def get_youtube_video_title(youtube_url: str) -> str:
+    try:
+        yt = YouTube(youtube_url)
+
+        title = yt.title
+
+        return title
+    except Exception as e:
+        print(e)
+        raise e
 
 
 def download_youtube_video(youtube_url: str, save_path: str) -> None:
@@ -18,6 +31,21 @@ def download_youtube_video(youtube_url: str, save_path: str) -> None:
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([youtube_url])
+    except Exception as e:
+        print(e)
+        raise e
+
+
+def download_youtube_audio(youtube_url: str, save_path: str) -> None:
+    try:
+        with YoutubeDL(
+            {
+                "extract_audio": True,
+                "format": "bestaudio",
+                "outtmpl": save_path,
+            }
+        ) as video:
+            video.download(youtube_url)
     except Exception as e:
         print(e)
         raise e
