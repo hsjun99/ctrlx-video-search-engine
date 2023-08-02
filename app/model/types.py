@@ -5,6 +5,20 @@ from typing import Optional, List, Generic, TypeVar, Optional, Dict, Union
 from pydantic import BaseModel, Field
 
 
+class VectorMetaDataType(BaseModel):
+    video_uid: str
+    order: int
+    start: Optional[float]
+    end: Optional[float]
+    text: Optional[str]
+
+
+class VectorType(BaseModel):
+    id: str
+    vector: List[float]
+    metadata: VectorMetaDataType
+
+
 class WordType(BaseModel):
     word: str
     start: Optional[float]

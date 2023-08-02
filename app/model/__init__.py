@@ -6,4 +6,6 @@ from .types import (
     SegmentType,
     WordType,
     TranscriptMetadataType,
+    VectorType,
+    VectorMetaDataType,
 )
