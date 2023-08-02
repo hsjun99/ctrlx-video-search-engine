@@ -28,18 +28,18 @@ class PineconeVectorStore:
 
         return docsearch
 
-    def get_vectors_from_index_name(
-        self,
-        index_name: str,
-        namespace: str,
-    ):
-        docsearch = Pinecone.from_existing_index(
-            embedding=OPENAI_EMBEDDING,
-            index_name=index_name,
-            namespace=namespace,
-        )
+    # def get_vectors_from_index_name(
+    #     self,
+    #     index_name: str,
+    #     namespace: str,
+    # ):
+    #     docsearch = Pinecone.from_existing_index(
+    #         embedding=OPENAI_EMBEDDING,
+    #         index_name=index_name,
+    #         namespace=namespace,
+    #     )
 
-        return docsearch
+    #     return docsearch
 
     def insert_vectors(
         self, index_name: str, namespace: str, vectors: List[VectorType]
@@ -51,7 +51,7 @@ class PineconeVectorStore:
             v["metadata"] = {k: v for k, v in v["metadata"].items() if v is not None}
 
         index = pinecone.Index(index_name=index_name)
-        index.upsert(vectors)
+        index.upsert(vectors=vectors, namespace=namespace)
 
     def delete_vectors_by_namespace(
         self,

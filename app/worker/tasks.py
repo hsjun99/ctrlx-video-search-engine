@@ -8,7 +8,7 @@ from app.services import IndexService
 
 
 @celery_app.task()
-def index_video(youtube_urls: List[str]):
+def index_video(video_uid: str):
     index_service = IndexService()
-
-    index_service.index_youtube_videos(youtube_urls)
+    index_service.index_plain_videos(video_uid=video_uid)
+    # index_service.index_youtube_videos(youtube_urls)

@@ -29,6 +29,18 @@ async def get_video_list(req: Request) -> APIResponse:
     )
 
 
+@router.post("/index/plain")
+async def index_plain_video(req: Request, video_uid: str) -> APIResponse:
+    index_video.delay(video_uid)
+
+    return APIResponse(
+        success=True,
+        code=200,
+        message="Operation completed successfully",
+        data={},
+    )
+
+
 @router.post("/index/youtube")
 async def index_youtube_video(req: Request) -> APIResponse:
     youtube_urls: List[str] = (await req.json()).get("youtube_urls", [])

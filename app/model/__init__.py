@@ -1,11 +1,8 @@
 from .types import (
     APIResponse,
-    VideoSplitType,
     VideoType,
-    FrameMetaDataType,
-    SegmentType,
-    WordType,
-    TranscriptMetadataType,
+    VideoMetaDataType,
     VectorType,
     VectorMetaDataType,
+    OrgType,
 )

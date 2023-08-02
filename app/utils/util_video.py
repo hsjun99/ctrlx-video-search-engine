@@ -5,9 +5,11 @@ from urllib.parse import urlparse, parse_qs
 from scenedetect import open_video, SceneManager
 from scenedetect.detectors import ContentDetector
 
-from .util_functions import timecode_to_float, get_dir_from_video_id
+from .util_functions import timecode_to_float, get_video_file_path
 
-from app.model import VideoSplitType
+from app.model import VideoType, VectorMetaDataType
+
+from app.constants import MIME_TYPES
 
 
 def get_youtube_video_title(youtube_url: str) -> str:
@@ -76,10 +78,9 @@ def extract_youtube_video_id(youtube_url: str) -> str:
 
 
 def split_video_into_scenes(
-    video_id: str, threshold: float = 40.0
-) -> List[VideoSplitType]:
-    dir = get_dir_from_video_id(video_id)
-    video_path = f"{dir}/{video_id}.mp4"
+    video: VideoType, threshold: float = 40.0
+) -> List[VectorMetaDataType]:
+    video_path = get_video_file_path(video=video)
 
     video = open_video(video_path)
 
@@ -88,15 +89,16 @@ def split_video_into_scenes(
     scene_manager.detect_scenes(video, show_progress=True)
     data = scene_manager.get_scene_list()
 
-    scene_list: List[VideoSplitType] = []
-    for item in data:
+    scene_list: List[VectorMetaDataType] = []
+    for index, item in enumerate(data):
         start = timecode_to_float(item[0].get_timecode())
         end = timecode_to_float(item[1].get_timecode())
         scene_list.append(
-            VideoSplitType(
+            VectorMetaDataType(
                 start="{:.2f}".format(start),
                 end="{:.2f}".format(end),
-                video_id=video_id,
+                video_uid=video.uid,
+                order=index,
             )
         )
 

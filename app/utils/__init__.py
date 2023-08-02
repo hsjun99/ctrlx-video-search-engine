@@ -1,6 +1,7 @@
 from .util_functions import (
     timecode_to_float,
-    get_dir_from_video_id,
+    get_dir_from_video_uid,
+    get_video_file_path,
 )
 
 from .util_video import (
