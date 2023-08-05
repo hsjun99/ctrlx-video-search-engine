@@ -2,6 +2,7 @@ from .util_functions import (
     timecode_to_float,
     get_dir_from_video_uid,
     get_video_file_path,
+    get_s3_key_from_video,
 )
 
 from .util_video import (
@@ -12,6 +13,11 @@ from .util_video import (
     get_youtube_video_title,
 )
 
-from .util_clip import vectorize_image_by_clip, search_video_by_clip
+from .util_clip import (
+    vectorize_image_by_clip,
+    vectorize_text_by_clip,
+    search_video_by_clip,
+)
+
 
 from .util_transcribe import transcribe_audio

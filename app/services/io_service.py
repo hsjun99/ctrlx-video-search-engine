@@ -1,7 +1,7 @@
 import os
 import shutil
 import boto3
-
+from boto3.s3.transfer import TransferConfig
 
 from app.constants import (
     AWS_ACCESS_KEY_ID,
@@ -13,7 +13,12 @@ from app.constants import (
 
 class IOService:
     def __init__(self):
-        pass
+        self.config = TransferConfig(
+            multipart_threshold=1024 * 100,
+            max_concurrency=20,
+            multipart_chunksize=1024 * 100,
+            use_threads=True,
+        )
 
     def create_directory(self, file_path: str) -> None:
         directory = os.path.dirname(file_path)

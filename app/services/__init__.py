@@ -3,6 +3,6 @@ from .io_service import IOService
 from .process_service import ProcessService
 
 
-# from .audio_service import AudioService
+from .transcribe_service import TranscribeService
 from .index_service import IndexService
 from .search_service import SearchService

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional, List, Generic, TypeVar, Optional, Dict, Union
+from typing import Optional, List, Generic, TypeVar, Optional, Dict, Union, Any
 
 from pydantic import BaseModel, Field
-
-import numpy as np
 
 
 class OrgType(BaseModel):
@@ -29,9 +27,8 @@ class VideoMetaDataType(BaseModel):
 class VideoType(BaseModel):
     id: int
     uid: str
-    key: str
     metadata: VideoMetaDataType
-    status: str
+    state: str
     org_uid: str
     created_at: str
     is_deleted: str
@@ -47,22 +44,23 @@ class VectorMetaDataType(BaseModel):
 
 class VectorType(BaseModel):
     id: str
-    vector: np.ndarray
+    vector: Optional[List[float]]
     metadata: VectorMetaDataType
 
 
-# class FrameMetaDataType(BaseModel):
-#     index: int
-#     frame: int
-#     video_id: str
+class WordType(BaseModel):
+    word: str
+    start: Optional[float]
+    end: Optional[float]
+    score: Optional[float]
 
 
-# class VideoSplitType(BaseModel):
-#     index: Optional[int]
-#     start: float
-#     end: float
-#     video_id: str
-#     index_list: Optional[List[int]]
+class SegmentType(BaseModel):
+    start: float
+    end: float
+    text: str
+    translation: Optional[str]
+    words: Optional[List[WordType]]
 
 
 DataT = TypeVar("DataT")
@@ -75,23 +73,13 @@ class APIResponse(BaseModel, Generic[DataT]):
     data: Optional[DataT] = None
 
 
+class VideoState:
+    READY = "READY"
+    UPLOADING = "UPLOADING"
+
+
 # class TranscriptMetadataType(BaseModel):
 #     index: int
 #     start: float
 #     end: float
 #     video_id: str
-
-
-# class WordType(BaseModel):
-#     word: str
-#     start: Optional[float]
-#     end: Optional[float]
-#     score: Optional[float]
-
-
-# class SegmentType(BaseModel):
-#     start: float
-#     end: float
-#     text: str
-#     translation: Optional[str]
-#     words: Optional[List[WordType]]

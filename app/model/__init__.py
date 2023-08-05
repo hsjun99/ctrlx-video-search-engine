@@ -5,4 +5,7 @@ from .types import (
     VectorType,
     VectorMetaDataType,
     OrgType,
+    VideoState,
+    WordType,
+    SegmentType,
 )

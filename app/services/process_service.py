@@ -6,6 +6,8 @@ from app.model import VideoType
 
 from app.services import IOService, VideoService
 
+from app.utils import get_s3_key_from_video
+
 
 class ProcessService:
     def __init__(self):
@@ -31,7 +33,7 @@ class ProcessService:
         self._ffmpeg_run(command)
 
         self.io_service.upload_file_to_s3(
-            file_path=save_path, key=f"{video.key}/{video.uid}.mp3"
+            file_path=save_path, key=f"{get_s3_key_from_video(video=video)}.mp3"
         )
 
     def extract_thumbnail(
@@ -42,7 +44,7 @@ class ProcessService:
         self._ffmpeg_run(command)
 
         self.io_service.upload_file_to_s3(
-            file_path=save_path, key=f"{video.key}/{video.uid}.png"
+            file_path=save_path, key=f"{get_s3_key_from_video(video=video)}.png"
         )
 
     def extract_metadata(

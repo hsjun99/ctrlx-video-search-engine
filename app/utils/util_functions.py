@@ -8,9 +8,13 @@ def timecode_to_float(timecode: str) -> float:
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
+def get_s3_key_from_video(video: VideoType) -> str:
+    return f"search/{video.org_uid}/{video.uid}/{video.uid}"
+
+
 def get_dir_from_video_uid(video_uid: str) -> str:
     return f"./app/files/video/{video_uid}"
 
 
 def get_video_file_path(video: VideoType) -> str:
-    return f"{get_dir_from_video_uid(video_id=video.uid)}/{video.uid}.{MIME_TYPES[video.metadata.type]}"
+    return f"{get_dir_from_video_uid(video_uid=video.uid)}/{video.uid}.{MIME_TYPES[video.metadata.type]}"

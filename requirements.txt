@@ -9,11 +9,14 @@ tiktoken
 yt_dlp
 scenedetect[opencv]
 Pillow
-faiss-cpu
 sentence-transformers
 numpy
-multilingual-clip
-open_clip_torch
 pytube
+boto3
+uuid
+git+https://github.com/supabase-community/supabase-py.git@dependabot/pip/develop/python-semantic-release-8.0.4
 git+https://github.com/m-bain/whisperx.git
-pinecone-client
+pinecone-client==2.2.1
+# supabase==1.0.3
+
+

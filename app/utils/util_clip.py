@@ -1,26 +1,26 @@
 from PIL import Image
-from typing import List
-import faiss
+
+# from typing import List
+# import faiss
 from sentence_transformers import SentenceTransformer, util
 
-from multilingual_clip import pt_multilingual_clip
-import transformers
+# from multilingual_clip import pt_multilingual_clip
+# import transformers
 
-import torch
-import open_clip
+# import torch
+# import open_clip
 
-import math
+# import math
 
 import numpy as np
 
-from app.model import VideoSplitType, FrameMetaDataType
 
-from app.constants import FAISS_DIMENSION
-
+# from app.constants import FAISS_DIMENSION
+#
 _model = None
-_image_model = None
-_text_model = None
-_tokenizr = None
+# _image_model = None
+# _text_model = None
+# _tokenizr = None
 
 N_NEIGHBORS = 100
 MIN_NUM_RESULTS = 10
@@ -67,7 +67,7 @@ def get_model():
 def vectorize_image_by_clip(image_path: str) -> np.ndarray:
     _model = get_model()
     img_emb = _model.encode(Image.open(image_path))
-    img_emb = img_emb.reshape(1, -1)
+    # img_emb = img_emb.reshape(1, -1)
 
     # _image_model, _preprocess = get_image_model_and_preprocess()
     # image = Image.open(image_path)
@@ -81,13 +81,21 @@ def vectorize_image_by_clip(image_path: str) -> np.ndarray:
     return img_emb
 
 
+def vectorize_text_by_clip(text: str) -> np.ndarray:
+    _model = get_model()
+    text_emb = _model.encode(text)
+
+    return text_emb
+
+
 def search_video_by_clip(
     query: str,
     vectorstore: any,
     frame_vectorsore: any,
-    metadata: List[VideoSplitType],
-    frame_metadata: List[FrameMetaDataType],
-) -> List[VideoSplitType]:
+    # metadata: List[VideoSplitType],
+    # frame_metadata: List[FrameMetaDataType],
+):
+    pass
     _model = get_model()
     # text_emb = _model.encode(query)
     # print(text_emb.shape)

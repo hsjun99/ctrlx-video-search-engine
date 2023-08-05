@@ -82,11 +82,11 @@ def split_video_into_scenes(
 ) -> List[VectorMetaDataType]:
     video_path = get_video_file_path(video=video)
 
-    video = open_video(video_path)
+    video_file = open_video(video_path)
 
     scene_manager = SceneManager()
     scene_manager.add_detector(ContentDetector(threshold=threshold))
-    scene_manager.detect_scenes(video, show_progress=True)
+    scene_manager.detect_scenes(video_file, show_progress=True)
     data = scene_manager.get_scene_list()
 
     scene_list: List[VectorMetaDataType] = []
