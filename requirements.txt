@@ -14,9 +14,13 @@ numpy
 pytube
 boto3
 uuid
-git+https://github.com/supabase-community/supabase-py.git@dependabot/pip/develop/python-semantic-release-8.0.4
-git+https://github.com/m-bain/whisperx.git
+ftfy
+regex
+tqdm
+# git+https://github.com/supabase-community/supabase-py.git@dependabot/pip/develop/python-semantic-release-7.29.1
+# git+https://github.com/m-bain/whisperx.git
+git+https://github.com/openai/CLIP.git
 pinecone-client==2.2.1
-# supabase==1.0.3
+supabase==1.0.3
 
 

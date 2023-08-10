@@ -15,6 +15,7 @@ from app.utils import (
     split_video_into_scenes,
     get_s3_key_from_video,
     download_youtube_video,
+    get_youtube_video_metadata,
 )
 
 from app.model import VideoType, VectorType, VectorMetaDataType, VideoState, SegmentType
@@ -25,6 +26,8 @@ from app.constants import (
     FRAME_VECTORSTORE_INDEX,
     SCENE_VECTORSTORE_INDEX,
     TRANSCRIPT_VECTORSTORE_INDEX,
+    FRAME768_VECTORSTORE_INDEX,
+    SCENE768_VECTORSTORE_INDEX,
 )
 
 from concurrent.futures import ThreadPoolExecutor
@@ -39,36 +42,47 @@ class IndexService:
 
         self.pine_vectorstore = PineconeVectorStore()
 
-    def _extract_audio_and_vectorize(self, video: VideoType) -> List[VectorType]:
+    def _upload_video_to_s3(self, video: VideoType) -> None:
+        self.io_service.upload_file_to_s3(
+            file_path=get_video_file_path(video=video),
+            key=f"{get_s3_key_from_video(video=video)}.mp4",
+        )
+
+    def _extract_audio(self, video: VideoType) -> None:
         save_dir = get_dir_from_video_uid(video_uid=video.uid)
 
-        self.process_service.extract_audio(
+        extracted = self.process_service.extract_audio(
             video=video,
             file_path=get_video_file_path(video=video),
             save_path=f"{save_dir}/{video.uid}.mp3",
         )
 
-        transcript: List[SegmentType] = self.transcribe_service.transcribe(
-            video_uid=video.uid
-        )
-        texts = [segment.text for segment in transcript]
-        self.pine_vectorstore.insert_vectors_from_texts(
-            texts=texts,
-            metadatas=[
-                {
-                    "video_uid": video.uid,
-                    "order": i + 1,
-                    "start": segment.start,
-                    "end": segment.end,
-                    "text": segment.text,
-                }
-                for i, segment in enumerate(transcript)
-            ],
-            index_name=TRANSCRIPT_VECTORSTORE_INDEX,
-            namespace=video.org_uid,
-        )
+        # if not extracted:
+        #     return []
 
-        # print(result)
+        # transcript: List[SegmentType] = self.transcribe_service.transcribe(
+        #     video_uid=video.uid
+        # )
+        # texts = [
+        #     segment.text
+        #     for segment in transcript
+        #     if segment is not None and segment.text is not None
+        # ]
+        # self.pine_vectorstore.insert_vectors_from_texts(
+        #     texts=texts,
+        #     metadatas=[
+        #         {
+        #             "video_uid": video.uid,
+        #             "order": i + 1,
+        #             "start": segment.start,
+        #             "end": segment.end,
+        #             "text": segment.text,
+        #         }
+        #         for i, segment in enumerate(transcript)
+        #     ],
+        #     index_name=TRANSCRIPT_VECTORSTORE_INDEX,
+        #     namespace=video.org_uid,
+        # )
 
     def _extract_frames_and_vectorize(self, video: VideoType) -> List[VectorType]:
         save_dir = Path(get_dir_from_video_uid(video_uid=video.uid))
@@ -97,7 +111,7 @@ class IndexService:
                 )
 
         self.pine_vectorstore.insert_vectors(
-            index_name=FRAME_VECTORSTORE_INDEX,
+            index_name=FRAME768_VECTORSTORE_INDEX,
             namespace=video.org_uid,
             vectors=saved_vectors,
         )
@@ -107,33 +121,21 @@ class IndexService:
     def _split_video(self, video: VideoType) -> List[VectorMetaDataType]:
         return split_video_into_scenes(video=video)
 
-    def index_plain_videos(self, video_uid: str) -> None:
-        video: VideoType = self.video_service.get(video_uid=video_uid)
-
-        # 0. Create directory
+    def _index_video(self, video: VideoType, s3_uploaded: bool = False) -> None:
         save_dir = get_dir_from_video_uid(video_uid=video.uid)
-        self.io_service.create_directory(save_dir)
-
-        # 1. Download Youtube ideo (TEST)
-        # download_youtube_video(
-        #     youtube_url="https://www.youtube.com/watch?v=WLtpQpKY7fw",
-        #     save_path=get_video_file_path(video=video),
-        # )
-
-        # 1. Download video
-        self.io_service.download_file_from_s3(
-            key=f"{get_s3_key_from_video(video=video)}.{MIME_TYPES[video.metadata.type]}",
-            file_path=get_video_file_path(video=video),
-        )
-
         # 2.
         # 0) Extract audio, thumbnail, metadata
         # 1) Extract frames + Vectorize
         # 2) Split video into scenes
         with ThreadPoolExecutor() as executor:
-            audio_future = executor.submit(
-                lambda: self._extract_audio_and_vectorize(video=video)
-            )
+            s3_upload_future = None
+            if not s3_uploaded:
+                s3_upload_future = executor.submit(
+                    lambda: self._upload_video_to_s3(
+                        video=video,
+                    )
+                )
+            audio_future = executor.submit(lambda: self._extract_audio(video=video))
             thumbnail_future = executor.submit(
                 lambda: self.process_service.extract_thumbnail(
                     video=video,
@@ -151,6 +153,7 @@ class IndexService:
             frame_vector_future = executor.submit(
                 lambda: self._extract_frames_and_vectorize(video=video)
             )
+            s3_upload_future.result()
             scene_list_future = executor.submit(lambda: self._split_video(video=video))
             audio_future.result()
             thumbnail_future.result()
@@ -213,20 +216,82 @@ class IndexService:
         with ThreadPoolExecutor() as executor:
             vector_insert_future = executor.submit(
                 lambda: self.pine_vectorstore.insert_vectors(
-                    index_name=SCENE_VECTORSTORE_INDEX,
+                    index_name=SCENE768_VECTORSTORE_INDEX,
                     namespace=video.org_uid,
                     vectors=scene_vectors,
                 )
             )
             state_update_future = executor.submit(
                 lambda: self.video_service.update(
-                    video_uid=video_uid, video_state=VideoState.READY
+                    video_uid=video.uid, video_state=VideoState.READY
                 )
             )
             vector_insert_future.result()
             state_update_future.result()
 
-        self.video_service.update(video_uid=video_uid, video_state=VideoState.READY)
+        self.video_service.update(video_uid=video.uid, video_state=VideoState.READY)
 
         # 5. Remove Assets
         self.io_service.remove_directory(save_dir)
+
+    def index_plain_video(self, video_uid: str) -> VideoType:
+        video: VideoType = self.video_service.get(video_uid=video_uid)
+
+        # 0. Create directory
+        save_dir = get_dir_from_video_uid(video_uid=video.uid)
+        self.io_service.create_directory(save_dir)
+
+        # 1. Download video
+        self.io_service.download_file_from_s3(
+            key=f"{get_s3_key_from_video(video=video)}.{MIME_TYPES[video.metadata.type]}",
+            file_path=get_video_file_path(video=video),
+        )
+
+        self._index_video(video=video)
+
+        return video
+
+    def index_youtube_video(self, video_uid: str, youtube_url: str) -> VideoType:
+        video: VideoType = self.video_service.get(video_uid=video_uid)
+
+        video = get_youtube_video_metadata(video=video, youtube_url=youtube_url)
+        video.metadata.type = "video/mp4"
+
+        # 0. Create directory
+        save_dir = get_dir_from_video_uid(video_uid=video.uid)
+        self.io_service.create_directory(save_dir)
+
+        # 1. Download Youtube Video
+        download_youtube_video(
+            youtube_url=youtube_url,
+            save_path=get_video_file_path(video=video),
+        )
+
+        self._index_video(video=video)
+
+        return video
+
+    def index_audio(self, video: VideoType, transcript: List[SegmentType]) -> None:
+        if transcript is None:
+            return
+
+        segments = [
+            segment
+            for segment in transcript
+            if segment is not None and segment.text is not None
+        ]
+        self.pine_vectorstore.insert_vectors_from_texts(
+            texts=[segment.text for segment in segments],
+            metadatas=[
+                {
+                    "video_uid": video.uid,
+                    "order": i + 1,
+                    "start": segment.start,
+                    "end": segment.end,
+                    "text": segment.text,
+                }
+                for i, segment in enumerate(segments)
+            ],
+            index_name=TRANSCRIPT_VECTORSTORE_INDEX,
+            namespace=video.org_uid,
+        )

@@ -27,14 +27,18 @@ class ProcessService:
 
         self._ffmpeg_run(command)
 
-    def extract_audio(self, video: VideoType, file_path: str, save_path: str) -> None:
+    def extract_audio(self, video: VideoType, file_path: str, save_path: str) -> bool:
         command = f"ffmpeg -y -i {file_path} -vn -ab 128k {save_path}"
 
-        self._ffmpeg_run(command)
+        try:
+            self._ffmpeg_run(command)
 
-        self.io_service.upload_file_to_s3(
-            file_path=save_path, key=f"{get_s3_key_from_video(video=video)}.mp3"
-        )
+            self.io_service.upload_file_to_s3(
+                file_path=save_path, key=f"{get_s3_key_from_video(video=video)}.mp3"
+            )
+            return True
+        except Exception as e:
+            return False
 
     def extract_thumbnail(
         self, video: VideoType, file_path: str, save_path: str

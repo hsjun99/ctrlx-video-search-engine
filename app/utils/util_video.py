@@ -11,6 +11,9 @@ from app.model import VideoType, VectorMetaDataType
 
 from app.constants import MIME_TYPES
 
+MAX_SCENE_SPLIT_LENGTH = 3
+SCENE_STRIDE = 1
+
 
 def get_youtube_video_title(youtube_url: str) -> str:
     try:
@@ -19,6 +22,18 @@ def get_youtube_video_title(youtube_url: str) -> str:
         title = yt.title
 
         return title
+    except Exception as e:
+        print(e)
+        raise e
+
+
+def get_youtube_video_metadata(video: VideoType, youtube_url: str) -> VideoType:
+    try:
+        yt = YouTube(youtube_url)
+
+        video.metadata.title = yt.title
+        video.metadata.duration = yt.length
+        return video
     except Exception as e:
         print(e)
         raise e
@@ -90,9 +105,12 @@ def split_video_into_scenes(
     data = scene_manager.get_scene_list()
 
     scene_list: List[VectorMetaDataType] = []
+    # order = 0
     for index, item in enumerate(data):
         start = timecode_to_float(item[0].get_timecode())
         end = timecode_to_float(item[1].get_timecode())
+        # duration = end - start
+
         scene_list.append(
             VectorMetaDataType(
                 start="{:.2f}".format(start),
@@ -101,5 +119,36 @@ def split_video_into_scenes(
                 order=index,
             )
         )
+
+        # if duration <= MAX_SCENE_SPLIT_LENGTH:
+        #     print(duration)
+        #     order += 1
+        #     scene_list.append(
+        #         VectorMetaDataType(
+        #             start="{:.2f}".format(start),
+        #             end="{:.2f}".format(end),
+        #             video_uid=video.uid,
+        #             order=order,
+        #         )
+        #     )
+        # else:
+        #     # Here we manually split the scene into smaller scenes of at most 5 seconds
+        #     split_start = start
+
+        #     while split_start < end:
+        #         order += 1
+        #         split_end = min(split_start + MAX_SCENE_SPLIT_LENGTH, end)
+        #         print(split_end - split_start)
+        #         scene_list.append(
+        #             VectorMetaDataType(
+        #                 start="{:.2f}".format(split_start),
+        #                 end="{:.2f}".format(split_end),
+        #                 video_uid=video.uid,
+        #                 order=order,
+        #             )
+        #         )
+        #         if split_start + MAX_SCENE_SPLIT_LENGTH > end:
+        #             break
+        #         split_start = split_start + SCENE_STRIDE
 
     return scene_list

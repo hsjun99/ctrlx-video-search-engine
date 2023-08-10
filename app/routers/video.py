@@ -1,39 +1,31 @@
-from typing import List
-from fastapi import APIRouter, Request
+from typing import List, Optional
+from fastapi import APIRouter, Request, UploadFile, File
 
-import os, json
+from celery import chain
+
+from PIL import Image
+from io import BytesIO
 
 router = APIRouter(
     prefix="/video",
     tags=["video"],
 )
 
-from app.worker import index_video
+from app.worker import (
+    index_plain_video,
+    index_youtube_video_first_step,
+    index_youtube_video_final_step,
+    task_inference,
+)
 from app.model import APIResponse
 from app.services import SearchService
 
 from app.vectorstore import PineconeVectorStore
 
 
-# @router.post("/list")
-# async def get_video_list(req: Request) -> APIResponse:
-#     video_list = []
-
-#     if os.path.isfile("./app/files/video_list.json"):
-#         with open("./app/files/video_list.json", "r") as f:
-#             video_list = json.load(f)
-
-#     return APIResponse(
-#         success=True,
-#         code=200,
-#         message="Operation completed successfully",
-#         data=video_list,
-#     )
-
-
 @router.post("/index/plain")
 async def index_plain_video(req: Request, video_uid: str) -> APIResponse:
-    index_video.delay(video_uid)
+    index_plain_video.delay(video_uid)
 
     return APIResponse(
         success=True,
@@ -43,15 +35,21 @@ async def index_plain_video(req: Request, video_uid: str) -> APIResponse:
     )
 
 
-@router.post("/delete/vector")
-async def index_plain_video(req: Request, namespace) -> APIResponse:
-    vectorstore = PineconeVectorStore()
+@router.post("/index/youtube")
+async def index_plain_video(
+    req: Request, video_uid: str, youtube_url: str
+) -> APIResponse:
+    # youtube_urls: List[str] = (await req.json()).get("youtube_urls", [])
 
-    vectorstore.delete_vectors_by_namespace(index_name="frame", namespace=namespace)
-    vectorstore.delete_vectors_by_namespace(index_name="scene", namespace=namespace)
-    vectorstore.delete_vectors_by_namespace(
-        index_name="transcript", namespace=namespace
+    task_chain = chain(
+        index_youtube_video_first_step.s(video_uid, youtube_url)
+        | task_inference
+        | index_youtube_video_final_step.s()
     )
+
+    task_chain.delay()
+
+    # index_youtube_video.delay(video_uid, youtube_url)
 
     return APIResponse(
         success=True,
@@ -61,11 +59,15 @@ async def index_plain_video(req: Request, namespace) -> APIResponse:
     )
 
 
-# @router.post("/index/youtube")
-# async def index_youtube_video(req: Request) -> APIResponse:
-#     youtube_urls: List[str] = (await req.json()).get("youtube_urls", [])
+# @router.post("/delete/vector/namespace")
+# async def delete_vector(req: Request, namespace: str) -> APIResponse:
+#     vectorstore = PineconeVectorStore()
 
-#     index_video.delay(youtube_urls)
+#     vectorstore.delete_vectors_by_namespace(index_name="frame-768", namespace=namespace)
+#     vectorstore.delete_vectors_by_namespace(index_name="scene-768", namespace=namespace)
+#     vectorstore.delete_vectors_by_namespace(
+#         index_name="transcript", namespace=namespace
+#     )
 
 #     return APIResponse(
 #         success=True,
@@ -75,22 +77,60 @@ async def index_plain_video(req: Request, namespace) -> APIResponse:
 #     )
 
 
+@router.post("/delete/vector")
+async def delete_vector_by_video_uid(
+    req: Request, org_uid: str, video_uid: str
+) -> APIResponse:
+    vectorstore = PineconeVectorStore()
+
+    print(org_uid, video_uid)
+
+    vectorstore.delete_vectors_by_filter(
+        index_name="frame-768", namespace=org_uid, filter={"video_uid": video_uid}
+    )
+    vectorstore.delete_vectors_by_filter(
+        index_name="scene-768", namespace=org_uid, filter={"video_uid": video_uid}
+    )
+    vectorstore.delete_vectors_by_filter(
+        index_name="transcript", namespace=org_uid, filter={"video_uid": video_uid}
+    )
+
+    return APIResponse(
+        success=True,
+        code=200,
+        message="Operation completed successfully",
+        data={},
+    )
+
+
 @router.post("/search")
 async def search_video(
-    req: Request, org_uid: str, video_uid: str = None, type="scene"
+    req: Request,
+    org_uid: str,
+    video_uid: str = None,
+    type: str = "scene",
+    file: Optional[UploadFile] = File(None),
 ) -> APIResponse:
     search_service = SearchService()
 
-    query: str = (await req.json()).get("query", "")
-
     final_items = None
     if type == "scene":
-        final_items = search_service.search_video(
-            query=query, org_uid=org_uid, video_uid=video_uid
-        )
+        query: str = (await req.json()).get("query", "")
+
+        final_items = search_service.search_video_by_text(org_uid=org_uid, query=query)
     elif type == "transcript":
+        query: str = (await req.json()).get("query", "")
+
         final_items = search_service.search_video_by_transcript(
-            query=query, org_uid=org_uid, video_uid=video_uid
+            query=query, org_uid=org_uid
+        )
+    elif type == "image":
+        file_contents = await file.read()
+
+        image = Image.open(BytesIO(file_contents))
+
+        final_items = search_service.search_video_by_image(
+            org_uid=org_uid, query_image=image
         )
 
     final_items = [item.dict() for item in final_items]

@@ -13,10 +13,10 @@ def transcribe_audio(file_path: str) -> List[SegmentType]:
         batch_size = 32  # reduce if low on GPU mem
         # change to "int8" if low on GPU mem (may reduce accuracy)
         compute_type = "float16"
-        print(1)
+        # print(1)
         # 1. Transcribe with original whisper (batched)
         model = whisperx.load_model("large-v2", device, compute_type=compute_type)
-        print(2)
+        # print(2)
         audio = whisperx.load_audio(file_path)
         result = model.transcribe(audio, batch_size=batch_size)
 
@@ -32,7 +32,7 @@ def transcribe_audio(file_path: str) -> List[SegmentType]:
             language_code=result["language"],
             device=device,
         )
-        print(3)
+        # print(3)
         result = whisperx.align(
             result["segments"],
             model_a,
@@ -41,7 +41,7 @@ def transcribe_audio(file_path: str) -> List[SegmentType]:
             device,
             return_char_alignments=False,
         )
-        print(4)
+        # print(4)
         # delete model if low on GPU resources
         # import gc
 
@@ -63,7 +63,7 @@ def transcribe_audio(file_path: str) -> List[SegmentType]:
         # Extract the list of words
         # transcript = []
         segments = parse_obj_as(List[SegmentType], result["segments"])
-        print(5)
+        # print(5)
         wordList: List[WordType] = []
         for segment in segments:
             for word in segment.words:
@@ -86,13 +86,13 @@ def transcribe_audio(file_path: str) -> List[SegmentType]:
                             wordList[index].end = wordList[index].start + 0.05
                         else:
                             wordList[index].end = wordList[index + 1].start
-        print(6)
+        # print(6)
         for index, segment in enumerate(segments):
             for word in segment.words:
                 if word.start is None or word.end is None:
                     word.start = wordList[index].start
                     word.end = wordList[index].end
-        print(7)
+        # print(7)
         return segments
     except Exception as e:
         print(e)
