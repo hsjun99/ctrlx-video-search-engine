@@ -31,6 +31,13 @@ class VideoRepository:
 
         return ret
 
+    def sb_get_all_video_uids(self) -> List[str]:
+        res = self.supabase.table(self.table_name).select("uid").execute()
+
+        ret = [item["uid"] for item in res.data]
+
+        return ret
+
     def sb_update_video(
         self,
         video_uid: str,

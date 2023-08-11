@@ -4,6 +4,8 @@ from app.model import (
     VideoMetaDataType,
 )
 
+from typing import List
+
 
 class VideoService:
     def __init__(self):
@@ -13,6 +15,11 @@ class VideoService:
         video: VideoType = self.video_repository.sb_get_video(video_uid)
 
         return video
+
+    def get_all_video_uids(self) -> List[str]:
+        video_uids: List[str] = self.video_repository.sb_get_all_video_uids()
+
+        return video_uids
 
     def update(
         self,

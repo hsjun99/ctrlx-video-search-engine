@@ -254,20 +254,20 @@ class IndexService:
     def index_youtube_video(self, video_uid: str, youtube_url: str) -> VideoType:
         video: VideoType = self.video_service.get(video_uid=video_uid)
 
-        video = get_youtube_video_metadata(video=video, youtube_url=youtube_url)
-        video.metadata.type = "video/mp4"
+        # video = get_youtube_video_metadata(video=video, youtube_url=youtube_url)
+        # video.metadata.type = "video/mp4"
 
-        # 0. Create directory
-        save_dir = get_dir_from_video_uid(video_uid=video.uid)
-        self.io_service.create_directory(save_dir)
+        # # 0. Create directory
+        # save_dir = get_dir_from_video_uid(video_uid=video.uid)
+        # self.io_service.create_directory(save_dir)
 
-        # 1. Download Youtube Video
-        download_youtube_video(
-            youtube_url=youtube_url,
-            save_path=get_video_file_path(video=video),
-        )
+        # # 1. Download Youtube Video
+        # download_youtube_video(
+        #     youtube_url=youtube_url,
+        #     save_path=get_video_file_path(video=video),
+        # )
 
-        self._index_video(video=video)
+        # self._index_video(video=video)
 
         return video
 

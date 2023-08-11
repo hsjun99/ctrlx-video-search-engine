@@ -32,6 +32,7 @@ MIN_NUM_RESULTS = 10
 def _get_device():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # print("Using {} device".format(device))
+    device = "cpu"
     return device
 
 

@@ -18,7 +18,7 @@ from app.worker import (
     task_inference,
 )
 from app.model import APIResponse
-from app.services import SearchService
+from app.services import SearchService, VideoService
 
 from app.vectorstore import PineconeVectorStore
 
@@ -35,12 +35,33 @@ async def index_plain_video(req: Request, video_uid: str) -> APIResponse:
     )
 
 
+# @router.post("/temp/index")
+# async def index_plain_video(req: Request) -> APIResponse:
+#     video_service = VideoService()
+#     video_uids: List[str] = video_service.get_all_video_uids()
+#     # video_uids = ["7b5ee750-ad7d-4dc5-91b8-ac0322ad95ad"]
+
+#     for uid in video_uids:
+#         task_chain = chain(
+#             index_youtube_video_first_step.s(uid, "temp")
+#             | task_inference
+#             | index_youtube_video_final_step.s()
+#         )
+
+#         task_chain.delay()
+
+#     return APIResponse(
+#         success=True,
+#         code=200,
+#         message="Operation completed successfully",
+#         data=video_uids,
+#     )
+
+
 @router.post("/index/youtube")
 async def index_plain_video(
     req: Request, video_uid: str, youtube_url: str
 ) -> APIResponse:
-    # youtube_urls: List[str] = (await req.json()).get("youtube_urls", [])
-
     task_chain = chain(
         index_youtube_video_first_step.s(video_uid, youtube_url)
         | task_inference
@@ -48,8 +69,6 @@ async def index_plain_video(
     )
 
     task_chain.delay()
-
-    # index_youtube_video.delay(video_uid, youtube_url)
 
     return APIResponse(
         success=True,
@@ -63,8 +82,8 @@ async def index_plain_video(
 # async def delete_vector(req: Request, namespace: str) -> APIResponse:
 #     vectorstore = PineconeVectorStore()
 
-#     vectorstore.delete_vectors_by_namespace(index_name="frame-768", namespace=namespace)
-#     vectorstore.delete_vectors_by_namespace(index_name="scene-768", namespace=namespace)
+#     # vectorstore.delete_vectors_by_namespace(index_name="frame-768", namespace=namespace)
+#     # vectorstore.delete_vectors_by_namespace(index_name="scene-768", namespace=namespace)
 #     vectorstore.delete_vectors_by_namespace(
 #         index_name="transcript", namespace=namespace
 #     )
