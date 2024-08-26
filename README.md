@@ -1,6 +1,6 @@
 # CtrlX
 
-### _Empower creators to craft captivating shorts with ease_
+### _Multimodal Video Search Engine_
 
 ---
 
